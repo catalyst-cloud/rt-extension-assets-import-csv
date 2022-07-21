@@ -594,7 +594,7 @@ need a prefix of "assets:". For example:
         'Parents' => 'parent',
     );
 
-The "parent" columun could then have entries like "123,256" or "assets:123" or "123,assets:42".
+The "parent" column could then have entries like "123,256", "assets:123" or "123,assets:42".
 
 =head1 AUTHOR
 
