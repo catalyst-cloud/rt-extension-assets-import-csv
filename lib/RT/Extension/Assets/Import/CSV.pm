@@ -473,7 +473,7 @@ sub process_links_field {
         next unless ! $ToObj
             || $ToObj->isa('RT::Ticket')
             || $ToObj->isa('RT::Asset');
-        $existing_links{$link->id} = [ 0, $Type, $link->Target, $link ];
+        $existing_links{$link->id} = [ $Type, $link->Target ];
     }
 
     # Allow comma separated list of things to link to.
@@ -485,7 +485,7 @@ sub process_links_field {
             if (! $ToObj) {
                 # A link outside of RT
                 if ($link->$mode eq $target) {
-                    $existing_links{$link->id} = [ 1 ];
+                    delete $existing_links{$link->id};
                     next AddLink;
                 }
             } else {
@@ -495,12 +495,12 @@ sub process_links_field {
 
                 if ($ToObj->isa('RT::Asset') && $target =~ /^asset:(\d+)$/) {
                     if ($ToObj->id == $1) {
-                        $existing_links{$link->id} = [ 1 ];
+                        delete $existing_links{$link->id};
                         next AddLink;
                     }
                 } elsif ($ToObj->isa('RT::Ticket') && $target =~ /^\d+$/) {
                     if ($ToObj->id == $value) {
-		        $existing_links{$link->id} = [ 1 ];
+                        delete $existing_links{$link->id};
                         next AddLink;
                     }
                 }
@@ -523,16 +523,14 @@ sub process_links_field {
 
     # Delete any links to URLs, Tickets or Assets not present in the CSV.
     for my $link (values %existing_links) {
-        if (@{ $link }[0] == 0) {
-            my $Type    = @{ $link }[1];
-            my $Target = @{ $link }[2];
-            my ($ok, $msg) = $asset->DeleteLink(Type => $Type, Target => $Target);
-            if ($ok && $msg =~ /no longer member of/) {
-                RT->Logger->info("Deleted $Type link for field $field to $Target for row $i (asset " . $asset->id . "): $msg");
-                $$changes++;
-            } else {
-                RT->Logger->error("Failed to delete $Type from $Target for row $i (asset " . $asset->id . "): $msg");
-            }
+        my $Type   = @{ $link }[0];
+        my $Target = @{ $link }[1];
+        my ($ok, $msg) = $asset->DeleteLink(Type => $Type, Target => $Target);
+        if ($ok && $msg =~ /no longer member of/) {
+            RT->Logger->info("Deleted $Type link for field $field to $Target for row $i (asset " . $asset->id . "): $msg");
+            $$changes++;
+        } else {
+            RT->Logger->error("Failed to delete $Type from $Target for row $i (asset " . $asset->id . "): $msg");
         }
     }
 }
